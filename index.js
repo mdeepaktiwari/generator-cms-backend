@@ -1,4 +1,5 @@
 const express = require("express");
+const cors = require("cors");
 const app = express();
 const db = require("./db");
 
@@ -7,8 +8,19 @@ const PORT = process.env.PORT;
 
 db();
 
+app.use(cors());
+// parse json
+app.use(express.json());
+
 app.get("/", (req, res) => {
   res.send("Welcome to the application");
+});
+
+// 404 handler - should be after all routes
+app.use((req, res) => {
+  res.status(404).json({
+    message: "Route not found",
+  });
 });
 
 app.listen(PORT, () => {
