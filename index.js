@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const router = require("./routes/v1");
 const app = express();
 const db = require("./db");
 
@@ -11,6 +12,8 @@ db();
 app.use(cors());
 // parse json
 app.use(express.json());
+
+app.use("/v1", router);
 
 app.get("/", (req, res) => {
   res.send("Welcome to the application");
