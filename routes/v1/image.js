@@ -6,5 +6,3 @@ const router = express.Router();
 router.post("/generate", auth, generateImage);
 
 module.exports = router;
-
-// /v1/image/generate
