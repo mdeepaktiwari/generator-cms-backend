@@ -17,8 +17,13 @@ exports.rewrite = async (req, res) => {
       });
     }
 
-    const prompt = `Rewrite the following content but keeping the content's meaning same. Only provide the rewritten text without any explanation, options or markups. Just return plain text
-    Content is: ${content}
+    const prompt = ` 
+      Rewrite the following content to improve clarity, grammar, and tone.
+      Keep the original meaning intact.
+      Only return the rewritten content.
+      Do NOT include explanations, bullet points, or multiple versions.
+
+      Content: ${content}
     `;
 
     const updated_content = await generateContentWithGemini(prompt);
