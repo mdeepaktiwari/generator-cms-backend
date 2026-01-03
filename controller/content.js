@@ -1,4 +1,5 @@
 const { GoogleGenAI } = require("@google/genai");
+const mongoose = require("mongoose");
 require("dotenv").config();
 const Content = require("../models/content");
 
@@ -54,3 +55,45 @@ async function generateContentWithGemini(prompt) {
   });
   return response.text;
 }
+
+exports.history = async (req, res) => {
+  try {
+    console.log(
+      `Started processing content history request for user ${req.user.id}`
+    );
+    const id = req.user.id;
+    const content = await Content.aggregate([
+      {
+        $match: { user_id: new mongoose.Types.ObjectId(id) },
+      },
+      {
+        $project: {
+          _id: 1,
+          type: 1,
+          createdAt: 1,
+          prompt: "$input_prompt",
+          content: "$output_content",
+        },
+      },
+      {
+        $sort: {
+          createdAt: -1,
+        },
+      },
+    ]);
+
+    console.log(content);
+
+    return res.status(200).json({
+      message: "Content fetched successfully",
+      content,
+    });
+  } catch (error) {
+    console.error(
+      `Error in fetching content history. Error is ${error.message}`
+    );
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+};

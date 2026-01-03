@@ -1,5 +1,6 @@
 require("dotenv").config();
 const fs = require("fs");
+const mongoose = require("mongoose");
 const cloudinary = require("cloudinary").v2;
 const { InferenceClient } = require("@huggingface/inference");
 const { RESOLUTION_MAP } = require("../constant");
@@ -92,3 +93,40 @@ async function uploadImage(buffer) {
       .end(buffer);
   });
 }
+
+exports.history = async (req, res) => {
+  try {
+    console.log(
+      `Started processing image history request for user ${req.user.id}`
+    );
+    const id = req.user.id;
+    const images = await Image.aggregate([
+      {
+        $match: { user_id: new mongoose.Types.ObjectId(id) },
+      },
+      {
+        $project: {
+          _id: 1,
+          url: "$image_url",
+          createdAt: 1,
+          prompt: 1,
+        },
+      },
+      {
+        $sort: {
+          createdAt: -1,
+        },
+      },
+    ]);
+
+    return res.status(200).json({
+      message: "Image fetched successfully",
+      images,
+    });
+  } catch (error) {
+    console.error(`Error in fetching image history. Error is ${error.message}`);
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+};
