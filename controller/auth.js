@@ -48,6 +48,7 @@ exports.signIn = async (req, res) => {
     return res.json({
       message: "Login successful",
       token,
+      name: payload.name,
     });
   } catch (error) {
     console.error(`Error in signing in user ${error.message}`);
