@@ -88,8 +88,6 @@ exports.history = async (req, res) => {
       },
     ]);
 
-    console.log(content);
-
     return res.status(200).json({
       message: "Content fetched successfully",
       content,
@@ -97,6 +95,52 @@ exports.history = async (req, res) => {
   } catch (error) {
     console.error(
       `Error in fetching content history. Error is ${error.message}`
+    );
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+};
+
+exports.contentWithId = async (req, res) => {
+  try {
+    console.log(
+      `Started processing content with id request for user ${req.user.id} and content id ${req.params.id}`
+    );
+    const { id: contentId } = req.params;
+
+    if (!contentId) {
+      return res.status(400).status({
+        message: "Content id is required",
+      });
+    }
+
+    const content = await Content.findById(contentId);
+
+    if (!content) {
+      return res.status(200).json({
+        message: "No content found",
+      });
+    }
+
+    if (content.user_id.toString() !== req.user.id) {
+      return res.status(400).json({
+        message: "Unauthorized access",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Content fetched successfully",
+      content: {
+        output: content.output_content,
+        createdAt: content.createdAt,
+        type: content.type,
+        input: content.input_prompt,
+      },
+    });
+  } catch (error) {
+    console.error(
+      `Error in fetching content details. Error is ${error.message}`
     );
     return res.status(500).json({
       message: "Internal server error",
