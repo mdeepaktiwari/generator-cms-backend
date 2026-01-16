@@ -147,3 +147,59 @@ exports.contentWithId = async (req, res) => {
     });
   }
 };
+
+exports.searchContent = async (req, res) => {
+  try {
+    console.log(
+      `Started processing search content request for user ${req.user.id}`
+    );
+
+    const { query } = req.query;
+    const id = req.user.id;
+
+    if (!query || query.trim() === "") {
+      return res.status(400).json({
+        message: "Search query is required",
+      });
+    }
+
+    const searchQuery = query.trim();
+    const userId = new mongoose.Types.ObjectId(id);
+
+    const content = await Content.aggregate([
+      {
+        $match: {
+          user_id: userId,
+          $or: [
+            { input_prompt: { $regex: searchQuery, $options: "i" } },
+            { output_content: { $regex: searchQuery, $options: "i" } },
+          ],
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          type: 1,
+          createdAt: 1,
+          prompt: "$input_prompt",
+          content: "$output_content",
+        },
+      },
+      {
+        $sort: {
+          createdAt: -1,
+        },
+      },
+    ]);
+
+    return res.status(200).json({
+      message: "Content searched successfully",
+      content,
+    });
+  } catch (error) {
+    console.error(`Error in searching content. Error is ${error.message}`);
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+};

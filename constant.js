@@ -46,4 +46,23 @@ exports.ACTIONS = {
     `,
     message: "Article generated successfully",
   },
+  "seo-content": {
+    prompt: `
+    You are an SEO content specialist.
+    Analyze the user provided article and generate the following:
+
+    1. An SEO optimized title (max 50 characters)
+    2. List of relevant SEO keyword (comma-separated)
+    3. A meta description (max 150 character)
+
+    Return the output strictly in the following format:
+
+    SEO Title:
+    SEO Keywords:
+    Meta description:
+
+    Return plain text only. Do not include explanation or extra content. 
+    `,
+    message: "SEO content generated successfully",
+  },
 };

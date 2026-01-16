@@ -20,7 +20,7 @@ const contentSchema = new mongoose.Schema(
     type: {
       type: String,
       required: true,
-      enum: ["rewrite", "expand", "shorten", "article"],
+      enum: ["rewrite", "expand", "shorten", "article", "seo-content"],
     },
   },
   {
