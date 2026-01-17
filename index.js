@@ -2,16 +2,40 @@ const express = require("express");
 const cors = require("cors");
 const router = require("./routes/v1");
 const app = express();
-const db = require("./db");
-
+const validateEnvVariables = require("./config/env");
+const database = require("./config/database");
+const { connectRedis } = require("./config/redis");
+const { configureCloudinary } = require("./config/cloudinary");
+const logger = require("./services/logger");
+const errorHandler = require("./middleware/errorHandler");
+const globalLimiter = require("./middleware/rateLimiter");
+const { sendError } = require("./services/response");
+const { HTTP_STATUS } = require("./constant");
 require("dotenv").config();
-const PORT = process.env.PORT;
 
-db();
+const PORT = process.env.PORT || 8000;
+
+try {
+  validateEnvVariables();
+} catch (error) {
+  logger.error(error.message);
+}
+
+database().catch((error) => {
+  logger.error(`Failed to connect to the database: ${error.message}`);
+});
+
+connectRedis().catch((error) => {
+  logger.error(`Failed to connect to the redis: ${error.message}`);
+});
+
+configureCloudinary();
 
 app.use(cors());
 // parse json
 app.use(express.json());
+
+app.use(globalLimiter);
 
 app.use("/v1", router);
 
@@ -21,11 +45,12 @@ app.get("/", (req, res) => {
 
 // 404 handler - should be after all routes
 app.use((req, res) => {
-  res.status(404).json({
-    message: "Route not found",
-  });
+  return sendError(res, HTTP_STATUS.NOT_FOUND, "Route not found");
 });
 
+// Error handling middleware
+app.use(errorHandler);
+
 app.listen(PORT, () => {
-  console.log(`Server started on PORT ${PORT}`);
+  logger.info(`Server started on PORT ${PORT}`);
 });

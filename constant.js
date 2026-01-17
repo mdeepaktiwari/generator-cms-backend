@@ -1,4 +1,4 @@
-exports.RESOLUTION_MAP = {
+const RESOLUTION_MAP = {
   "1024x1024": { width: 1024, height: 1024 },
   "512x512": { width: 512, height: 512 },
   "768x768": { width: 768, height: 768 },
@@ -6,8 +6,16 @@ exports.RESOLUTION_MAP = {
   "768x1024": { width: 768, height: 1024 },
 };
 
-exports.ACTIONS = {
-  rewrite: {
+const CONTENT_ACTIONS = {
+  REWRITE: "rewrite",
+  EXPAND: "expand",
+  SHORTEN: "shorten",
+  GENERATE_ARTICLE: "article",
+  SEO_CONTENT: "seo-content",
+};
+
+const ACTIONS = {
+  [CONTENT_ACTIONS.REWRITE]: {
     prompt: `
       You are a professional content editor.
       Rewrite the user-provided content to improve clarity, grammar, and tone.
@@ -17,7 +25,7 @@ exports.ACTIONS = {
     `,
     message: "Content rewritten successfully",
   },
-  expand: {
+  [CONTENT_ACTIONS.EXPAND]: {
     prompt: `
       You are a professional content editor.
       Expand the user-provided content with relevant details.
@@ -26,7 +34,7 @@ exports.ACTIONS = {
     `,
     message: "Content expanded successfully",
   },
-  shorten: {
+  [CONTENT_ACTIONS.SHORTEN]: {
     prompt: `
       You are a professional content editor.
       Shorten the user-provided content while preserving the core meaning.
@@ -35,7 +43,7 @@ exports.ACTIONS = {
     `,
     message: "Content shorted successfully",
   },
-  article: {
+  [CONTENT_ACTIONS.GENERATE_ARTICLE]: {
     prompt: `
       You are a professional content writer and article creator.
       Generate a well-structured, informative, and engaging article on the given topic.
@@ -46,7 +54,7 @@ exports.ACTIONS = {
     `,
     message: "Article generated successfully",
   },
-  "seo-content": {
+  [CONTENT_ACTIONS.SEO_CONTENT]: {
     prompt: `
     You are an SEO content specialist.
     Analyze the user provided article and generate the following:
@@ -65,4 +73,24 @@ exports.ACTIONS = {
     `,
     message: "SEO content generated successfully",
   },
+};
+
+const HTTP_STATUS = {
+  OK: 200,
+  CREATED: 201,
+  BAD_REQUEST: 400,
+  UNAUTHORIZED: 401,
+  NOT_FOUND: 404,
+  INTERVAL_SERVER_ERROR: 500,
+  SERVICE_UNAVAILABLE: 503,
+};
+
+const JWT_EXPIRATION = "7d";
+
+module.exports = {
+  RESOLUTION_MAP,
+  ACTIONS,
+  CONTENT_ACTIONS,
+  HTTP_STATUS,
+  JWT_EXPIRATION,
 };

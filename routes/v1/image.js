@@ -1,9 +1,9 @@
 const express = require("express");
 const { generateImage, history } = require("../../controller/image");
-const { auth } = require("../../middleware/auth");
+const { authenticate } = require("../../middleware/authenticate");
 const router = express.Router();
 
-router.post("/generate", auth, generateImage);
-router.get("/history", auth, history);
+router.post("/generate", authenticate, generateImage);
+router.get("/history", authenticate, history);
 
 module.exports = router;

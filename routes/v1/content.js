@@ -5,12 +5,12 @@ const {
   contentWithId,
   searchContent,
 } = require("../../controller/content");
-const { auth } = require("../../middleware/auth");
+const { authenticate } = require("../../middleware/authenticate");
 const router = express.Router();
 
-router.post("/:action", auth, generateContent);
-router.get("/history", auth, history);
-router.get("/search", auth, searchContent);
-router.get("/:id", auth, contentWithId);
+router.post("/:action", authenticate, generateContent);
+router.get("/history", authenticate, history);
+router.get("/search", authenticate, searchContent);
+router.get("/:id", authenticate, contentWithId);
 
 module.exports = router;

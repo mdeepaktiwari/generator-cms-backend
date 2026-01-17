@@ -1,132 +1,87 @@
 require("dotenv").config();
-const fs = require("fs");
 const mongoose = require("mongoose");
-const cloudinary = require("cloudinary").v2;
-const { InferenceClient } = require("@huggingface/inference");
-const { RESOLUTION_MAP } = require("../constant");
+const { RESOLUTION_MAP, HTTP_STATUS } = require("../constant");
 const Image = require("../models/image");
+const { generateImageBlob } = require("../services/image/generateImage");
+const { uploadImage } = require("../services/image/upload");
+const { redisClient } = require("../config/redis");
+const {
+  sendError,
+  sendSuccess,
+  asyncHandler,
+} = require("../services/response");
+const logger = require("../services/logger");
 
-const client = new InferenceClient(process.env.HUGGING_FACE_API_KEY);
+exports.generateImage = asyncHandler(async (req, res) => {
+  logger.info(
+    `Started processing of image generation request for user id ${req.user.id}`,
+  );
+  const { prompt, resolution } = req.body;
+  const cacheKey = `${resolution}:${prompt}`;
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+  if (!prompt) {
+    return sendError(res, HTTP_STATUS.BAD_REQUEST, "Prompt is required");
+  }
+
+  logger.info(`Prompt: ${prompt} and Resolution: ${resolution}`);
+
+  const cachedUrl = await redisClient.get(cacheKey);
+
+  if (cachedUrl) {
+    logger.info("Data is fetched from the cache");
+    return sendSuccess(res, HTTP_STATUS.OK, "Image generated successfully", {
+      image: cachedUrl,
+    });
+  }
+
+  const dimension = RESOLUTION_MAP[resolution] || RESOLUTION_MAP["1024x1024"];
+
+  const image = await generateImageBlob(prompt, dimension);
+
+  const buffer = Buffer.from(await image.arrayBuffer());
+
+  // fs.writeFileSync("output.png", buffer);
+
+  const uploadedImage = await uploadImage(buffer);
+
+  await redisClient.set(cacheKey, uploadedImage?.url);
+
+  await Image.create({
+    prompt,
+    image_url: uploadedImage?.url,
+    user_id: req.user.id,
+  });
+
+  return sendSuccess(res, HTTP_STATUS.OK, "Image generated successfully", {
+    image: uploadedImage?.url,
+  });
 });
 
-exports.generateImage = async (req, res) => {
-  try {
-    console.log(`Started processing of image generation request`);
-    const { prompt, resolution } = req.body;
-    console.log(
-      `Started processing of image generation request for user id ${req.user.id}`
-    );
-
-    if (!process.env.HUGGING_FACE_API_KEY) {
-      console.log("Hugging Face API key not configured");
-      return res.status(500).json({
-        message: "Interval server error",
-      });
-    }
-
-    if (!prompt) {
-      return res.status(400).json({
-        message: "Prompt is required",
-      });
-    }
-
-    console.log(`Prompt: ${prompt} and Resolution: ${resolution}`);
-
-    const dimension = RESOLUTION_MAP[resolution] || RESOLUTION_MAP["1024x1024"];
-
-    const image = await generateImageBlob(prompt, dimension);
-
-    const buffer = Buffer.from(await image.arrayBuffer());
-
-    fs.writeFileSync("output.png", buffer);
-
-    const uploadedImage = await uploadImage(buffer);
-
-    await Image.create({
-      prompt,
-      image_url: uploadedImage?.url,
-      user_id: req.user.id,
-    });
-
-    return res.json({
-      message: "Image generated successfully",
-      image: uploadedImage?.url,
-    });
-  } catch (error) {
-    console.error(`Error in generating image. Error is ${error.message}`);
-    return res.status(500).json({
-      message: "Internal server error",
-    });
-  }
-};
-
-async function generateImageBlob(prompt, dimension) {
-  return await client.textToImage({
-    provider: "auto",
-    model: "black-forest-labs/FLUX.1-schnell",
-    inputs: prompt,
-    parameters: {
-      num_inference_steps: 5,
-      width: dimension.width,
-      height: dimension.height,
+exports.history = asyncHandler(async (req, res) => {
+  logger.info(
+    `Started processing image history request for user ${req.user.id}`,
+  );
+  const id = req.user.id;
+  const images = await Image.aggregate([
+    {
+      $match: { user_id: new mongoose.Types.ObjectId(id) },
     },
+    {
+      $project: {
+        _id: 1,
+        url: "$image_url",
+        createdAt: 1,
+        prompt: 1,
+      },
+    },
+    {
+      $sort: {
+        createdAt: -1,
+      },
+    },
+  ]);
+
+  return sendSuccess(res, HTTP_STATUS.OK, "Image fetched successfully", {
+    images,
   });
-}
-
-async function uploadImage(buffer) {
-  return new Promise((resolve, reject) => {
-    cloudinary.uploader
-      .upload_stream(
-        { resource_type: "image", folder: "generated-ai-image" },
-        (error, uploadResult) => {
-          if (error) {
-            return reject(error);
-          }
-          return resolve(uploadResult);
-        }
-      )
-      .end(buffer);
-  });
-}
-
-exports.history = async (req, res) => {
-  try {
-    console.log(
-      `Started processing image history request for user ${req.user.id}`
-    );
-    const id = req.user.id;
-    const images = await Image.aggregate([
-      {
-        $match: { user_id: new mongoose.Types.ObjectId(id) },
-      },
-      {
-        $project: {
-          _id: 1,
-          url: "$image_url",
-          createdAt: 1,
-          prompt: 1,
-        },
-      },
-      {
-        $sort: {
-          createdAt: -1,
-        },
-      },
-    ]);
-
-    return res.status(200).json({
-      message: "Image fetched successfully",
-      images,
-    });
-  } catch (error) {
-    console.error(`Error in fetching image history. Error is ${error.message}`);
-    return res.status(500).json({
-      message: "Internal server error",
-    });
-  }
-};
+});
