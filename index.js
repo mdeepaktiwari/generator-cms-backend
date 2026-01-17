@@ -40,8 +40,14 @@ app.use(globalLimiter);
 app.use("/v1", router);
 
 app.get("/", (req, res) => {
-  res.send("Welcome to the application");
+  res.status(200).json({
+    success: true,
+    message: "Welcome to Generator CMS API",
+    version: "1.0.0",
+    status: "API is running",
+  });
 });
+
 
 // 404 handler - should be after all routes
 app.use((req, res) => {
